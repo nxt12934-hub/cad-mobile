@@ -57,7 +57,7 @@
             </div>
             <div>
                 <h1 class="font-bold text-sm sm:text-base tracking-wide flex items-center gap-2">
-                    CAD Studio Pro <span class="text-xs bg-blue-900/60 text-blue-400 border border-blue-700/50 px-2 py-0.5 rounded-full font-normal">v5.3 Freehand Fix</span>
+                    CAD Studio Pro <span class="text-xs bg-blue-900/60 text-blue-400 border border-blue-700/50 px-2 py-0.5 rounded-full font-normal">v5.4 Arc Restored</span>
                 </h1>
             </div>
         </div>
@@ -151,7 +151,7 @@
                 <i class="fa-solid fa-slash text-xs"></i>
                 <span class="text-[8px] mt-0.5">直線</span>
             </button>
-            <button onclick="app.setTool('arc')" id="tool-arc" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="三點定弧">
+            <button onclick="app.setTool('arc')" id="tool-arc" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="三點定弧 (點 1: 起點, 點 2: 通過點, 點 3: 終點)">
                 <i class="fa-solid fa-archway text-xs"></i>
                 <span class="text-[8px] mt-0.5">弧線</span>
             </button>
@@ -350,7 +350,7 @@
 
             <!-- Footer Copyright -->
             <div class="p-3 bg-slate-950/60 border-t border-slate-800 text-[11px] text-center text-slate-500 font-sans">
-                © 2026 牟家慶. All rights reserved.[cite: 1]
+                © 2026 牟家慶. All rights reserved.
             </div>
         </aside>
     </div>
@@ -543,6 +543,7 @@
                 this.selectedIds = new Set();
                 this.activeTool = 'select';
                 
+                // Arc drawing sub-steps state
                 this.arcStep = 0;
                 this.arcTemp = { p1: null, p2: null };
 
@@ -735,6 +736,39 @@
                 };
             }
 
+            // Math Utility: Calculate Circle Center & Arc Angle from 3 points
+            getCircleCenter(p1, p2, p3) {
+                const A = p2.x - p1.x;
+                const B = p2.y - p1.y;
+                const C = p3.x - p1.x;
+                const D = p3.y - p1.y;
+                const E = A * (p1.x + p2.x) + B * (p1.y + p2.y);
+                const F = C * (p1.x + p3.x) + D * (p1.y + p3.y);
+                const det = A * D - B * C;
+                if (Math.abs(det) < 1e-6) return null;
+                const cx = (D * E - B * F) / (2 * det);
+                const cy = (A * F - C * E) / (2 * det);
+                const r = Math.hypot(p1.x - cx, p1.y - cy);
+                return { cx, cy, r };
+            }
+
+            getArcParams(p1, p2, p3) {
+                const res = this.getCircleCenter(p1, p2, p3);
+                if (!res) return null;
+                const { cx, cy, r } = res;
+                const a1 = Math.atan2(p1.y - cy, p1.x - cx);
+                const a2 = Math.atan2(p2.y - cy, p2.x - cx);
+                const a3 = Math.atan2(p3.y - cy, p3.x - cx);
+                
+                let anticlockwise = false;
+                let diff12 = (a2 - a1 + Math.PI * 2) % (Math.PI * 2);
+                let diff13 = (a3 - a1 + Math.PI * 2) % (Math.PI * 2);
+                if (diff12 > diff13) {
+                    anticlockwise = true;
+                }
+                return { cx, cy, r, startAngle: a1, endAngle: a3, anticlockwise };
+            }
+
             getLineIntersection(p1, p2, p3, p4) {
                 const denom = (p4.y - p3.y) * (p2.x - p1.x) - (p4.x - p3.x) * (p2.y - p1.y);
                 if (denom === 0) return null;
@@ -842,7 +876,6 @@
                     this.isPointerDown = true;
                     const worldPos = this.screenToWorld(e.clientX, e.clientY);
                     
-                    // 手繪不套用物件鎖點以保持運筆平順
                     const snap = (this.activeTool === 'freehand') ? { x: worldPos.x, y: worldPos.y, type: null } : this.getSnapPoint(worldPos.x, worldPos.y);
                     const pt = { x: snap.x, y: snap.y };
                     this.startPoint = pt;
@@ -879,6 +912,35 @@
                             }
                         }
                         this.updateInspector();
+                    } else if (this.activeTool === 'arc') {
+                        // 三點定弧逐步判定
+                        if (this.arcStep === 0) {
+                            this.arcTemp.p1 = pt;
+                            this.arcStep = 1;
+                            this.isPointerDown = false;
+                        } else if (this.arcStep === 1) {
+                            this.arcTemp.p2 = pt;
+                            this.arcStep = 2;
+                            this.isPointerDown = false;
+                        } else if (this.arcStep === 2) {
+                            const newArc = {
+                                id: Date.now(),
+                                type: 'arc',
+                                p1: this.arcTemp.p1,
+                                p2: this.arcTemp.p2,
+                                p3: pt,
+                                color: this.settings.strokeColor,
+                                width: this.settings.strokeWidth
+                            };
+                            this.pushHistory();
+                            this.shapes.push(newArc);
+                            this.arcStep = 0;
+                            this.arcTemp = { p1: null, p2: null };
+                            this.selectedIds.clear();
+                            this.selectedIds.add(newArc.id);
+                            this.updateInspector();
+                            this.isPointerDown = false;
+                        }
                     } else if (this.activeTool === 'mirror') {
                         if (this.mirrorStep === 0) {
                             this.mirrorLine.p1 = pt;
@@ -957,7 +1019,6 @@
                     } else if (this.activeTool === 'circle') {
                         this.currentDrawingShape = { id: Date.now(), type: 'circle', cx: pt.x, cy: pt.y, r: 0, color: this.settings.strokeColor, width: this.settings.strokeWidth };
                     } else if (this.activeTool === 'freehand') {
-                        // 初始化手繪點位物件
                         this.currentDrawingShape = {
                             id: Date.now(),
                             type: 'freehand',
@@ -1022,7 +1083,7 @@
                     }
                 }
 
-                if (!this.isPointerDown && this.markerStep === 0 && this.mirrorStep === 0) {
+                if (!this.isPointerDown && this.markerStep === 0 && this.mirrorStep === 0 && this.activeTool !== 'arc') {
                     this.render();
                     return;
                 }
@@ -1063,9 +1124,10 @@
                     } else if (this.currentDrawingShape.type === 'circle') {
                         this.currentDrawingShape.r = Math.hypot(targetPt.x - this.startPoint.x, targetPt.y - this.startPoint.y);
                     } else if (this.currentDrawingShape.type === 'freehand') {
-                        // 即時將滑鼠/觸控點加入手繪路徑
                         this.currentDrawingShape.points.push({ x: targetPt.x, y: targetPt.y });
                     }
+                    this.render();
+                } else if (this.activeTool === 'arc') {
                     this.render();
                 }
             }
@@ -1095,7 +1157,6 @@
                         this.updateInspector();
                     }
                     if (this.isPointerDown && this.currentDrawingShape) {
-                        // 確保手繪筆至少有兩個點位或完整圖形時寫入圖元庫
                         if (this.currentDrawingShape.type !== 'freehand' || this.currentDrawingShape.points.length > 1) {
                             this.shapes.push(this.currentDrawingShape);
                             this.pushHistory();
@@ -1139,6 +1200,12 @@
                         if (x >= s.x - sz && x <= s.x + sz && y >= s.y - sz && y <= s.y + sz) return s.id;
                     } else if (['line', 'dimension'].includes(s.type)) {
                         if (this.distToSegment({x, y}, {x: s.x1, y: s.y1}, {x: s.x2, y: s.y2}) < 10 / this.view.scale) return s.id;
+                    } else if (s.type === 'arc') {
+                        const params = this.getArcParams(s.p1, s.p2, s.p3);
+                        if (params) {
+                            const d = Math.hypot(x - params.cx, y - params.cy);
+                            if (Math.abs(d - params.r) < 12 / this.view.scale) return s.id;
+                        }
                     } else if (s.type === 'rect') {
                         if (x >= s.x && x <= s.x + s.w && y >= s.y && y <= s.y + s.h) return s.id;
                     } else if (s.type === 'circle') {
@@ -1171,6 +1238,10 @@
                 if (['line', 'dimension'].includes(s.type)) {
                     return s.x1 >= minX && s.x1 <= maxX && s.y1 >= minY && s.y1 <= maxY;
                 }
+                if (s.type === 'arc') {
+                    return (s.p1.x >= minX && s.p1.x <= maxX && s.p1.y >= minY && s.p1.y <= maxY) ||
+                           (s.p3.x >= minX && s.p3.x <= maxX && s.p3.y >= minY && s.p3.y <= maxY);
+                }
                 if (s.type === 'rect') return s.x >= minX && s.x + s.w <= maxX && s.y >= minY && s.y + s.h <= maxY;
                 if (s.type === 'circle') return s.cx >= minX && s.cx <= maxX && s.cy >= minY && s.cy <= maxY;
                 if (s.type === 'freehand' && s.points) {
@@ -1190,6 +1261,10 @@
                 } else if (['line', 'dimension'].includes(s.type)) {
                     s.x1 += dx; s.y1 += dy;
                     s.x2 += dx; s.y2 += dy;
+                } else if (s.type === 'arc') {
+                    s.p1.x += dx; s.p1.y += dy;
+                    s.p2.x += dx; s.p2.y += dy;
+                    s.p3.x += dx; s.p3.y += dy;
                 } else if (s.type === 'rect') {
                     s.x += dx; s.y += dy;
                 } else if (s.type === 'circle') {
@@ -1229,6 +1304,10 @@
                         const r2 = reflectPt({x: copy.x2, y: copy.y2});
                         copy.x1 = r1.x; copy.y1 = r1.y;
                         copy.x2 = r2.x; copy.y2 = r2.y;
+                    } else if (copy.type === 'arc') {
+                        copy.p1 = reflectPt(copy.p1);
+                        copy.p2 = reflectPt(copy.p2);
+                        copy.p3 = reflectPt(copy.p3);
                     } else if (copy.type === 'marker') {
                         const rTarget = reflectPt({x: copy.x, y: copy.y});
                         const rBubble = reflectPt({x: copy.bx, y: copy.by});
@@ -1512,7 +1591,7 @@
                     const labelNames = {
                         'door_double': '雙開門', 'window': '窗戶', 'shutter': '鐵捲門',
                         'stair_single': '單向樓梯', 'stair_double': '雙向樓梯',
-                        'line': '直線', 'rect': '矩形', 'circle': '圓形', 'freehand': '手繪路徑'
+                        'line': '直線', 'arc': '弧線', 'rect': '矩形', 'circle': '圓形', 'freehand': '手繪路徑'
                     };
                     container.innerHTML = `
                         <div class="flex justify-between mb-1"><span>類型:</span> <span class="text-slate-200 uppercase font-mono">${labelNames[s.type] || s.type}</span></div>
@@ -1625,7 +1704,7 @@
                 document.getElementById('tracker-stat-total').innerText = this.shapes.length;
                 document.getElementById('tracker-stat-markers').innerText = this.shapes.filter(s => ['marker', 'marker_simple'].includes(s.type)).length;
                 document.getElementById('tracker-stat-openings').innerText = this.shapes.filter(s => s.type.includes('door') || ['window', 'shutter'].includes(s.type)).length;
-                document.getElementById('tracker-stat-others').innerText = this.shapes.filter(s => s.type.includes('stair') || ['line', 'rect', 'circle', 'freehand'].includes(s.type)).length;
+                document.getElementById('tracker-stat-others').innerText = this.shapes.filter(s => s.type.includes('stair') || ['line', 'rect', 'circle', 'arc', 'freehand'].includes(s.type)).length;
 
                 const tbody = document.getElementById('tracker-tbody');
                 tbody.innerHTML = filtered.map(s => {
@@ -1633,6 +1712,7 @@
                     if (s.x !== undefined) { posX = s.x; posY = s.y; }
                     else if (s.x1 !== undefined) { posX = s.x1; posY = s.y1; }
                     else if (s.cx !== undefined) { posX = s.cx; posY = s.cy; }
+                    else if (s.type === 'arc' && s.p1) { posX = (s.p1.x + s.p3.x)/2; posY = (s.p1.y + s.p3.y)/2; }
                     else if (s.type === 'freehand' && s.points && s.points.length > 0) {
                         posX = s.points[0].x; posY = s.points[0].y;
                     }
@@ -1656,6 +1736,7 @@
                 if (s.x !== undefined) { px = s.x; py = s.y; }
                 else if (s.x1 !== undefined) { px = s.x1; py = s.y1; }
                 else if (s.cx !== undefined) { px = s.cx; py = s.cy; }
+                else if (s.type === 'arc' && s.p1) { px = (s.p1.x + s.p3.x)/2; py = (s.p1.y + s.p3.y)/2; }
                 else if (s.type === 'freehand' && s.points && s.points.length > 0) {
                     px = s.points[0].x; py = s.points[0].y;
                 }
@@ -1759,6 +1840,11 @@
                         minY = Math.min(minY, s.y1, s.y2);
                         maxX = Math.max(maxX, s.x1, s.x2);
                         maxY = Math.max(maxY, s.y1, s.y2);
+                    } else if (s.type === 'arc') {
+                        minX = Math.min(minX, s.p1.x, s.p2.x, s.p3.x);
+                        minY = Math.min(minY, s.p1.y, s.p2.y, s.p3.y);
+                        maxX = Math.max(maxX, s.p1.x, s.p2.x, s.p3.x);
+                        maxY = Math.max(maxY, s.p1.y, s.p2.y, s.p3.y);
                     } else if (s.type === 'rect') {
                         minX = Math.min(minX, s.x, s.x + s.w);
                         minY = Math.min(minY, s.y, s.y + s.h);
@@ -1944,12 +2030,36 @@
 
                 if (this.settings.gridEnabled) this.drawGrid();
 
-                // 繪製已有圖元
                 this.shapes.forEach(s => this.drawShape(this.ctx, s, false));
 
-                // 繪製正在畫的圖形（包含即時手繪線條）
                 if (this.currentDrawingShape) {
                     this.drawShape(this.ctx, this.currentDrawingShape, false);
+                }
+
+                // 三點定弧即時引導預覽 (Live Arc Preview)
+                if (this.activeTool === 'arc') {
+                    if (this.arcStep === 1 && this.arcTemp.p1) {
+                        this.ctx.save();
+                        this.ctx.strokeStyle = '#38bdf8';
+                        this.ctx.lineWidth = 1.5 / this.view.scale;
+                        this.ctx.setLineDash([4, 4]);
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(this.arcTemp.p1.x, this.arcTemp.p1.y);
+                        this.ctx.lineTo(this.currentPointer.x, this.currentPointer.y);
+                        this.ctx.stroke();
+                        this.ctx.restore();
+                    } else if (this.arcStep === 2 && this.arcTemp.p1 && this.arcTemp.p2) {
+                        const params = this.getArcParams(this.arcTemp.p1, this.arcTemp.p2, this.currentPointer);
+                        if (params) {
+                            this.ctx.save();
+                            this.ctx.strokeStyle = this.settings.strokeColor;
+                            this.ctx.lineWidth = this.settings.strokeWidth;
+                            this.ctx.beginPath();
+                            this.ctx.arc(params.cx, params.cy, params.r, params.startAngle, params.endAngle, params.anticlockwise);
+                            this.ctx.stroke();
+                            this.ctx.restore();
+                        }
+                    }
                 }
 
                 // Live Drawing Preview for Marker
@@ -2082,6 +2192,14 @@
                         for (let i = 1; i < s.points.length; i++) {
                             ctx.lineTo(s.points[i].x, s.points[i].y);
                         }
+                        ctx.stroke();
+                    }
+                } else if (s.type === 'arc') {
+                    // 三點定弧渲染
+                    const params = this.getArcParams(s.p1, s.p2, s.p3);
+                    if (params) {
+                        ctx.beginPath();
+                        ctx.arc(params.cx, params.cy, params.r, params.startAngle, params.endAngle, params.anticlockwise);
                         ctx.stroke();
                     }
                 } else if (s.type === 'marker') {
