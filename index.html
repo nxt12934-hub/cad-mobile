@@ -57,7 +57,7 @@
             </div>
             <div>
                 <h1 class="font-bold text-sm sm:text-base tracking-wide flex items-center gap-2">
-                    CAD Studio Pro <span class="text-xs bg-blue-900/60 text-blue-400 border border-blue-700/50 px-2 py-0.5 rounded-full font-normal">v6.1 Dimension & Text Customization</span>
+                    CAD Studio Pro <span class="text-xs bg-blue-900/60 text-blue-400 border border-blue-700/50 px-2 py-0.5 rounded-full font-normal">v6.2 Pro Responsive & Collapsible</span>
                 </h1>
             </div>
         </div>
@@ -97,6 +97,9 @@
                 <i class="fa-solid fa-file-export"></i>
                 <span>匯出</span>
             </button>
+            <button onclick="app.togglePropertiesPanelCollapse()" class="hidden md:flex p-2 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 text-slate-300 transition" title="展開/收合屬性面板">
+                <i class="fa-solid fa-angles-right" id="properties-toggle-icon"></i>
+            </button>
             <button onclick="app.togglePanel('properties')" class="md:hidden p-2 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 text-slate-300">
                 <i class="fa-solid fa-sliders"></i>
             </button>
@@ -106,118 +109,141 @@
     <!-- Main Workspace Area -->
     <div class="flex-1 relative flex overflow-hidden">
 
-        <!-- Left Toolbars -->
-        <aside class="absolute left-3 top-3 z-10 flex flex-col space-y-1 bg-slate-900/95 backdrop-blur-md p-2 rounded-xl border border-slate-800 shadow-2xl max-h-[calc(100vh-80px)] overflow-y-auto">
-            <div class="text-[10px] text-center font-semibold text-slate-400 uppercase tracking-wider mb-0.5">編輯</div>
-            
-            <button onclick="app.setTool('select')" id="tool-select" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-blue-600 text-white transition shadow" title="選取與框選">
-                <i class="fa-solid fa-arrow-pointer text-xs"></i>
-                <span class="text-[8px] mt-0.5">選取</span>
-            </button>
-            <button onclick="app.setTool('pan')" id="tool-pan" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="平移畫布">
-                <i class="fa-solid fa-hand text-xs"></i>
-                <span class="text-[8px] mt-0.5">平移</span>
-            </button>
-            <button onclick="app.setTool('move')" id="tool-move" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="移動 (Move)">
-                <i class="fa-solid fa-arrows-up-down-left-right text-xs"></i>
-                <span class="text-[8px] mt-0.5">移動</span>
-            </button>
-            <button onclick="app.setTool('copy_tool')" id="tool-copy_tool" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-400 transition" title="複製物件 (點選物件基準點複製)">
-                <i class="fa-solid fa-clone text-xs"></i>
-                <span class="text-[8px] mt-0.5">複製</span>
-            </button>
-            <button onclick="app.setTool('rotate')" id="tool-rotate" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="旋轉物件 (Rotate)">
-                <i class="fa-solid fa-rotate text-xs"></i>
-                <span class="text-[8px] mt-0.5">旋轉</span>
-            </button>
-            <button onclick="app.setTool('mirror')" id="tool-mirror" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-purple-400 transition" title="鏡射 (Mirror 兩點軸線)">
-                <i class="fa-solid fa-arrows-split-up-and-left text-xs"></i>
-                <span class="text-[8px] mt-0.5">鏡射</span>
-            </button>
-            <button onclick="app.setTool('trim')" id="tool-trim" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-rose-400 transition" title="修剪 (點擊交點間線段進行剪除)">
-                <i class="fa-solid fa-scissors text-xs"></i>
-                <span class="text-[8px] mt-0.5">修剪</span>
-            </button>
+        <!-- Left Scalable & Collapsible Toolbars -->
+        <aside id="left-toolbar" class="absolute left-3 top-3 z-10 flex flex-col space-y-1 bg-slate-900/95 backdrop-blur-md p-2 rounded-xl border border-slate-800 shadow-2xl max-h-[calc(100vh-80px)] overflow-y-auto transition-all duration-300">
+            <!-- Toolbar Category Header: Edit -->
+            <div class="flex items-center justify-between px-1 py-0.5 cursor-pointer hover:bg-slate-800/60 rounded" onclick="app.toggleToolCategory('edit')">
+                <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">編輯</span>
+                <i class="fa-solid fa-chevron-down text-[9px] text-slate-500 transition-transform duration-200" id="cat-chevron-edit"></i>
+            </div>
+            <div id="cat-group-edit" class="flex flex-col space-y-1">
+                <button onclick="app.setTool('select')" id="tool-select" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-blue-600 text-white transition shadow" title="選取與框選">
+                    <i class="fa-solid fa-arrow-pointer text-xs"></i>
+                    <span class="text-[8px] mt-0.5">選取</span>
+                </button>
+                <button onclick="app.setTool('pan')" id="tool-pan" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="平移畫布">
+                    <i class="fa-solid fa-hand text-xs"></i>
+                    <span class="text-[8px] mt-0.5">平移</span>
+                </button>
+                <button onclick="app.setTool('move')" id="tool-move" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="移動 (Move)">
+                    <i class="fa-solid fa-arrows-up-down-left-right text-xs"></i>
+                    <span class="text-[8px] mt-0.5">移動</span>
+                </button>
+                <button onclick="app.setTool('copy_tool')" id="tool-copy_tool" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-400 transition" title="複製物件 (點選物件基準點複製)">
+                    <i class="fa-solid fa-clone text-xs"></i>
+                    <span class="text-[8px] mt-0.5">複製</span>
+                </button>
+                <button onclick="app.setTool('rotate')" id="tool-rotate" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="旋轉物件 (Rotate)">
+                    <i class="fa-solid fa-rotate text-xs"></i>
+                    <span class="text-[8px] mt-0.5">旋轉</span>
+                </button>
+                <button onclick="app.setTool('mirror')" id="tool-mirror" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-purple-400 transition" title="鏡射 (Mirror 兩點軸線)">
+                    <i class="fa-solid fa-arrows-split-up-and-left text-xs"></i>
+                    <span class="text-[8px] mt-0.5">鏡射</span>
+                </button>
+                <button onclick="app.setTool('trim')" id="tool-trim" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-rose-400 transition" title="修剪 (點擊交點間線段進行剪除)">
+                    <i class="fa-solid fa-scissors text-xs"></i>
+                    <span class="text-[8px] mt-0.5">修剪</span>
+                </button>
+            </div>
 
             <div class="w-full h-px bg-slate-800 my-1"></div>
-            <div class="text-[9px] text-center font-semibold text-emerald-400 uppercase tracking-wider mb-0.5">標註點位</div>
 
-            <button onclick="app.setTool('marker')" id="tool-marker" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-400 transition" title="帶箭頭編號圓形指標">
-                <i class="fa-solid fa-location-arrow text-xs"></i>
-                <span class="text-[8px] mt-0.5">帶箭頭點位</span>
-            </button>
-            <button onclick="app.setTool('marker_simple')" id="tool-marker_simple" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-teal-400 transition" title="純數字圓形點位 (無箭頭)">
-                <i class="fa-regular fa-circle-dot text-xs"></i>
-                <span class="text-[8px] mt-0.5">純數字點位</span>
-            </button>
-
-            <div class="w-full h-px bg-slate-800 my-1"></div>
-            <div class="text-[9px] text-center font-semibold text-slate-400 uppercase tracking-wider mb-0.5">幾何繪圖</div>
-
-            <button onclick="app.setTool('line')" id="tool-line" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="直線">
-                <i class="fa-solid fa-slash text-xs"></i>
-                <span class="text-[8px] mt-0.5">直線</span>
-            </button>
-            <button onclick="app.setTool('mline')" id="tool-mline" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-400 transition" title="複線 (雙平行線 MLine)">
-                <i class="fa-solid fa-bars text-xs"></i>
-                <span class="text-[8px] mt-0.5">複線</span>
-            </button>
-            <button onclick="app.setTool('arc')" id="tool-arc" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="三點定弧">
-                <i class="fa-solid fa-archway text-xs"></i>
-                <span class="text-[8px] mt-0.5">弧線</span>
-            </button>
-            <button onclick="app.setTool('rect')" id="tool-rect" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="矩形">
-                <i class="fa-regular fa-square text-xs"></i>
-                <span class="text-[8px] mt-0.5">矩形</span>
-            </button>
-            <button onclick="app.setTool('circle')" id="tool-circle" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="圓形">
-                <i class="fa-regular fa-circle text-xs"></i>
-                <span class="text-[8px] mt-0.5">圓形</span>
-            </button>
-            <button onclick="app.setTool('freehand')" id="tool-freehand" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="手繪筆">
-                <i class="fa-solid fa-pen-nib text-xs"></i>
-                <span class="text-[8px] mt-0.5">手繪</span>
-            </button>
-            <button onclick="app.setTool('dimension')" id="tool-dimension" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 transition" title="尺寸標註">
-                <i class="fa-solid fa-ruler-combined text-xs"></i>
-                <span class="text-[8px] mt-0.5">尺寸</span>
-            </button>
-            <button onclick="app.setTool('text')" id="tool-text" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="文字">
-                <i class="fa-solid fa-font text-xs"></i>
-                <span class="text-[8px] mt-0.5">文字</span>
-            </button>
+            <!-- Toolbar Category Header: Marker -->
+            <div class="flex items-center justify-between px-1 py-0.5 cursor-pointer hover:bg-slate-800/60 rounded" onclick="app.toggleToolCategory('marker')">
+                <span class="text-[9px] font-semibold text-emerald-400 uppercase tracking-wider">標註點位</span>
+                <i class="fa-solid fa-chevron-down text-[9px] text-slate-500 transition-transform duration-200" id="cat-chevron-marker"></i>
+            </div>
+            <div id="cat-group-marker" class="flex flex-col space-y-1">
+                <button onclick="app.setTool('marker')" id="tool-marker" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-400 transition" title="帶箭頭編號圓形指標">
+                    <i class="fa-solid fa-location-arrow text-xs"></i>
+                    <span class="text-[8px] mt-0.5">帶箭頭點位</span>
+                </button>
+                <button onclick="app.setTool('marker_simple')" id="tool-marker_simple" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-teal-400 transition" title="純數字圓形點位 (無箭頭)">
+                    <i class="fa-regular fa-circle-dot text-xs"></i>
+                    <span class="text-[8px] mt-0.5">純數字點位</span>
+                </button>
+            </div>
 
             <div class="w-full h-px bg-slate-800 my-1"></div>
-            <div class="text-[9px] text-center font-semibold text-amber-400 uppercase tracking-wider mb-0.5">建築符號</div>
 
-            <button onclick="app.setTool('door_single')" id="tool-door_single" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 transition" title="單開門 (8種方位)">
-                <i class="fa-solid fa-door-open text-xs"></i>
-                <span class="text-[8px] mt-0.5">單開門</span>
-            </button>
-            <button onclick="app.setTool('door_double')" id="tool-door_double" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 transition" title="雙開門">
-                <i class="fa-solid fa-dungeon text-xs"></i>
-                <span class="text-[8px] mt-0.5">雙開門</span>
-            </button>
-            <button onclick="app.setTool('window')" id="tool-window" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 transition" title="窗戶">
-                <i class="fa-solid fa-border-all text-xs"></i>
-                <span class="text-[8px] mt-0.5">窗戶</span>
-            </button>
-            <button onclick="app.setTool('shutter')" id="tool-shutter" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-orange-400 transition" title="鐵捲門">
-                <i class="fa-solid fa-warehouse text-xs"></i>
-                <span class="text-[8px] mt-0.5">鐵捲門</span>
-            </button>
-            <button onclick="app.setTool('stair_single')" id="tool-stair_single" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-300 transition" title="單向樓梯">
-                <i class="fa-solid fa-stairs text-xs"></i>
-                <span class="text-[8px] mt-0.5">單向樓梯</span>
-            </button>
-            <button onclick="app.setTool('stair_double')" id="tool-stair_double" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-300 transition" title="雙向樓梯">
-                <i class="fa-solid fa-layer-group text-xs"></i>
-                <span class="text-[8px] mt-0.5">雙向樓梯</span>
-            </button>
-            <button onclick="app.setTool('stair_standard')" id="tool-stair_standard" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-300 transition" title="標準梯 (可動上下文字)">
-                <i class="fa-solid fa-square-poll-vertical text-xs"></i>
-                <span class="text-[8px] mt-0.5">標準梯</span>
-            </button>
+            <!-- Toolbar Category Header: Geometry -->
+            <div class="flex items-center justify-between px-1 py-0.5 cursor-pointer hover:bg-slate-800/60 rounded" onclick="app.toggleToolCategory('geometry')">
+                <span class="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">幾何繪圖</span>
+                <i class="fa-solid fa-chevron-down text-[9px] text-slate-500 transition-transform duration-200" id="cat-chevron-geometry"></i>
+            </div>
+            <div id="cat-group-geometry" class="flex flex-col space-y-1">
+                <button onclick="app.setTool('line')" id="tool-line" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="直線">
+                    <i class="fa-solid fa-slash text-xs"></i>
+                    <span class="text-[8px] mt-0.5">直線</span>
+                </button>
+                <button onclick="app.setTool('mline')" id="tool-mline" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-400 transition" title="複線 (雙平行線 MLine)">
+                    <i class="fa-solid fa-bars text-xs"></i>
+                    <span class="text-[8px] mt-0.5">複線</span>
+                </button>
+                <button onclick="app.setTool('arc')" id="tool-arc" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="三點定弧">
+                    <i class="fa-solid fa-archway text-xs"></i>
+                    <span class="text-[8px] mt-0.5">弧線</span>
+                </button>
+                <button onclick="app.setTool('rect')" id="tool-rect" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="矩形">
+                    <i class="fa-regular fa-square text-xs"></i>
+                    <span class="text-[8px] mt-0.5">矩形</span>
+                </button>
+                <button onclick="app.setTool('circle')" id="tool-circle" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="圓形">
+                    <i class="fa-regular fa-circle text-xs"></i>
+                    <span class="text-[8px] mt-0.5">圓形</span>
+                </button>
+                <button onclick="app.setTool('freehand')" id="tool-freehand" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="手繪筆">
+                    <i class="fa-solid fa-pen-nib text-xs"></i>
+                    <span class="text-[8px] mt-0.5">手繪</span>
+                </button>
+                <button onclick="app.setTool('dimension')" id="tool-dimension" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 transition" title="尺寸標註">
+                    <i class="fa-solid fa-ruler-combined text-xs"></i>
+                    <span class="text-[8px] mt-0.5">尺寸</span>
+                </button>
+                <button onclick="app.setTool('text')" id="tool-text" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="文字">
+                    <i class="fa-solid fa-font text-xs"></i>
+                    <span class="text-[8px] mt-0.5">文字</span>
+                </button>
+            </div>
+
+            <div class="w-full h-px bg-slate-800 my-1"></div>
+
+            <!-- Toolbar Category Header: Architecture -->
+            <div class="flex items-center justify-between px-1 py-0.5 cursor-pointer hover:bg-slate-800/60 rounded" onclick="app.toggleToolCategory('arch')">
+                <span class="text-[9px] font-semibold text-amber-400 uppercase tracking-wider">建築符號</span>
+                <i class="fa-solid fa-chevron-down text-[9px] text-slate-500 transition-transform duration-200" id="cat-chevron-arch"></i>
+            </div>
+            <div id="cat-group-arch" class="flex flex-col space-y-1">
+                <button onclick="app.setTool('door_single')" id="tool-door_single" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 transition" title="單開門 (8種方位)">
+                    <i class="fa-solid fa-door-open text-xs"></i>
+                    <span class="text-[8px] mt-0.5">單開門</span>
+                </button>
+                <button onclick="app.setTool('door_double')" id="tool-door_double" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 transition" title="雙開門">
+                    <i class="fa-solid fa-dungeon text-xs"></i>
+                    <span class="text-[8px] mt-0.5">雙開門</span>
+                </button>
+                <button onclick="app.setTool('window')" id="tool-window" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 transition" title="窗戶">
+                    <i class="fa-solid fa-border-all text-xs"></i>
+                    <span class="text-[8px] mt-0.5">窗戶</span>
+                </button>
+                <button onclick="app.setTool('shutter')" id="tool-shutter" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-orange-400 transition" title="鐵捲門">
+                    <i class="fa-solid fa-warehouse text-xs"></i>
+                    <span class="text-[8px] mt-0.5">鐵捲門</span>
+                </button>
+                <button onclick="app.setTool('stair_single')" id="tool-stair_single" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-300 transition" title="單向樓梯">
+                    <i class="fa-solid fa-stairs text-xs"></i>
+                    <span class="text-[8px] mt-0.5">單向樓梯</span>
+                </button>
+                <button onclick="app.setTool('stair_double')" id="tool-stair_double" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-300 transition" title="雙向樓梯">
+                    <i class="fa-solid fa-layer-group text-xs"></i>
+                    <span class="text-[8px] mt-0.5">雙向樓梯</span>
+                </button>
+                <button onclick="app.setTool('stair_standard')" id="tool-stair_standard" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-300 transition" title="標準梯 (可動上下文字)">
+                    <i class="fa-solid fa-square-poll-vertical text-xs"></i>
+                    <span class="text-[8px] mt-0.5">標準梯</span>
+                </button>
+            </div>
         </aside>
 
         <!-- Canvas Container -->
@@ -246,16 +272,21 @@
             </div>
         </div>
 
-        <!-- Right Properties & Inspector Panel -->
+        <!-- Right Properties & Inspector Panel (Collapsible) -->
         <aside id="properties-panel" class="w-80 bg-slate-900 border-l border-slate-800 flex flex-col z-10 transition-all duration-300 shrink-0">
             <div class="p-4 border-b border-slate-800 flex items-center justify-between">
-                <h2 class="font-semibold text-sm flex items-center gap-2">
-                    <i class="fa-solid fa-sliders text-blue-500"></i> 屬性與微調面板
+                <h2 class="font-semibold text-sm flex items-center gap-2" id="properties-header-title">
+                    <i class="fa-solid fa-sliders text-blue-500"></i> <span class="properties-title-text">屬性與微調面板</span>
                 </h2>
-                <button onclick="app.togglePanel('properties')" class="md:hidden text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+                <div class="flex items-center space-x-1">
+                    <button onclick="app.togglePropertiesPanelCollapse()" class="hidden md:flex text-slate-400 hover:text-white p-1 rounded" title="收合/展開">
+                        <i class="fa-solid fa-angles-right" id="properties-toggle-inner-icon"></i>
+                    </button>
+                    <button onclick="app.togglePanel('properties')" class="md:hidden text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+                </div>
             </div>
 
-            <div class="flex-1 overflow-y-auto p-4 space-y-6">
+            <div class="flex-1 overflow-y-auto p-4 space-y-6" id="properties-body-content">
                 <!-- Marker Quick Prefix Settings -->
                 <div class="space-y-3 bg-emerald-950/20 border border-emerald-900/30 p-3 rounded-xl">
                     <h3 class="text-xs font-semibold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
@@ -381,7 +412,7 @@
             </div>
 
             <!-- Footer Copyright -->
-            <div class="p-3 bg-slate-950/60 border-t border-slate-800 text-[11px] text-center text-slate-500 font-sans">
+            <div class="p-3 bg-slate-950/60 border-t border-slate-800 text-[11px] text-center text-slate-500 font-sans" id="properties-footer">
                 © 2026 牟家慶. All rights reserved.
             </div>
         </aside>
@@ -606,6 +637,14 @@
                 this.isDraggingStairText = false;
                 this.draggingStairTarget = null;
 
+                this.isPropertiesCollapsed = false;
+                this.toolCategoriesState = {
+                    edit: true,
+                    marker: true,
+                    geometry: true,
+                    arch: true
+                };
+
                 this.view = { x: 0, y: 0, scale: 1 };
                 
                 this.settings = {
@@ -680,6 +719,47 @@
                         this.copySelected();
                     }
                 });
+            }
+
+            toggleToolCategory(catKey) {
+                this.toolCategoriesState[catKey] = !this.toolCategoriesState[catKey];
+                const groupEl = document.getElementById(`cat-group-${catKey}`);
+                const chevronEl = document.getElementById(`cat-chevron-${catKey}`);
+                if (groupEl && chevronEl) {
+                    if (this.toolCategoriesState[catKey]) {
+                        groupEl.style.display = 'flex';
+                        chevronEl.style.transform = 'rotate(0deg)';
+                    } else {
+                        groupEl.style.display = 'none';
+                        chevronEl.style.transform = 'rotate(-90deg)';
+                    }
+                }
+            }
+
+            togglePropertiesPanelCollapse() {
+                this.isPropertiesCollapsed = !this.isPropertiesCollapsed;
+                const panel = document.getElementById('properties-panel');
+                const titleText = document.querySelector('.properties-title-text');
+                const bodyContent = document.getElementById('properties-body-content');
+                const footer = document.getElementById('properties-footer');
+                const toggleIcon = document.getElementById('properties-toggle-icon');
+                const toggleInnerIcon = document.getElementById('properties-toggle-inner-icon');
+
+                if (this.isPropertiesCollapsed) {
+                    panel.style.width = '56px';
+                    if (titleText) titleText.style.display = 'none';
+                    if (bodyContent) bodyContent.style.display = 'none';
+                    if (footer) footer.style.display = 'none';
+                    if (toggleIcon) toggleIcon.className = 'fa-solid fa-angles-left';
+                    if (toggleInnerIcon) toggleInnerIcon.className = 'fa-solid fa-angles-left';
+                } else {
+                    panel.style.width = '320px';
+                    if (titleText) titleText.style.display = 'inline';
+                    if (bodyContent) bodyContent.style.display = 'block';
+                    if (footer) footer.style.display = 'block';
+                    if (toggleIcon) toggleIcon.className = 'fa-solid fa-angles-right';
+                    if (toggleInnerIcon) toggleInnerIcon.className = 'fa-solid fa-angles-right';
+                }
             }
 
             setTool(tool) {
