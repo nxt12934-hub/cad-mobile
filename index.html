@@ -57,7 +57,7 @@
             </div>
             <div>
                 <h1 class="font-bold text-sm sm:text-base tracking-wide flex items-center gap-2">
-                    CAD Studio Pro <span class="text-xs bg-blue-900/60 text-blue-400 border border-blue-700/50 px-2 py-0.5 rounded-full font-normal">v6.2 Pro Responsive & Collapsible</span>
+                    CAD Studio Pro <span class="text-xs bg-blue-900/60 text-blue-400 border border-blue-700/50 px-2 py-0.5 rounded-full font-normal">v6.4 Marker Auto-Pause</span>
                 </h1>
             </div>
         </div>
@@ -1336,6 +1336,13 @@
                             this.selectedIds.add(newMarker.id);
                             this.updateInspector();
                             this.render();
+
+                            // Auto-pause after 2 seconds
+                            setTimeout(() => {
+                                if (this.activeTool === 'marker') {
+                                    this.setTool('select');
+                                }
+                            }, 2000);
                         }
                     } else if (this.activeTool === 'marker_simple') {
                         const simpleMarker = {
@@ -1353,6 +1360,13 @@
                         this.selectedIds.add(simpleMarker.id);
                         this.updateInspector();
                         this.render();
+
+                        // Auto-pause after 2 seconds
+                        setTimeout(() => {
+                            if (this.activeTool === 'marker_simple') {
+                                this.setTool('select');
+                            }
+                        }, 2000);
                     } else if (['door_single', 'door_double', 'window', 'shutter', 'stair_single', 'stair_double', 'stair_standard'].includes(this.activeTool)) {
                         const newSymbol = {
                             id: Date.now(),
@@ -1769,6 +1783,16 @@
                     if (!s) return;
                     if (['door_single', 'door_double', 'window', 'shutter', 'stair_single', 'stair_double', 'stair_standard', 'text'].includes(s.type)) {
                         s.rotation = ((s.rotation || 0) + deg) % 360;
+                    } else if (s.type === 'marker') {
+                        // 旋轉帶箭頭點位的圓圈指標 (bx, by) 繞著目標點 (x, y) 轉動指定角度
+                        const rad = (deg * Math.PI) / 180;
+                        const dx = s.bx - s.x;
+                        const dy = s.by - s.y;
+                        const cos = Math.cos(rad);
+                        const sin = Math.sin(rad);
+                        s.bx = s.x + (dx * cos - dy * sin);
+                        s.by = s.y + (dx * sin + dy * cos);
+                        s.rotation = ((s.rotation || 0) + deg) % 360;
                     }
                 });
                 this.render();
@@ -1943,6 +1967,7 @@
                 if (s.type === 'marker' || s.type === 'marker_simple') {
                     const currentScale = s.scale || 1.0;
                     const isArrow = s.type === 'marker';
+                    const currentRot = s.rotation || 0;
                     container.innerHTML = `
                         <div class="flex items-center justify-between font-semibold ${isArrow ? 'text-emerald-400' : 'text-teal-400'} mb-2">
                             <span><i class="${isArrow ? 'fa-solid fa-location-arrow' : 'fa-regular fa-circle-dot'}"></i> ${isArrow ? '帶箭頭點位標註' : '純數字點位標註'}</span>
@@ -1952,6 +1977,12 @@
                                 <label class="text-[11px] text-slate-400 block mb-1">編號 (圓圈文字)</label>
                                 <input type="text" value="${s.label}" onchange="app.updateSelectedMarkerLabel(this.value)" class="w-full bg-slate-800 border border-slate-700 rounded px-2.5 py-1 text-xs text-slate-100 font-mono focus:outline-none focus:border-emerald-500">
                             </div>
+                            ${isArrow ? `
+                            <div class="flex items-center justify-between bg-slate-800/60 p-2 rounded border border-slate-700/60 text-xs">
+                                <span class="text-slate-400">轉向角度 (Rotation):</span>
+                                <span class="font-mono text-emerald-400 font-semibold">${currentRot}°</span>
+                            </div>
+                            ` : ''}
                             <div>
                                 <div class="flex justify-between text-[11px] text-slate-400 mb-1">
                                     <span>圖示縮放大小 (Scale)</span>
