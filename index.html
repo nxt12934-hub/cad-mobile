@@ -57,7 +57,7 @@
             </div>
             <div>
                 <h1 class="font-bold text-sm sm:text-base tracking-wide flex items-center gap-2">
-                    CAD Studio Pro <span class="text-xs bg-blue-900/60 text-blue-400 border border-blue-700/50 px-2 py-0.5 rounded-full font-normal">v5.7 MLine & Dash</span>
+                    CAD Studio Pro <span class="text-xs bg-blue-900/60 text-blue-400 border border-blue-700/50 px-2 py-0.5 rounded-full font-normal">v6.1 Dimension & Text Customization</span>
                 </h1>
             </div>
         </div>
@@ -67,7 +67,9 @@
             <button onclick="app.undo()" title="復原 (Undo)" class="p-2 hover:bg-slate-700 rounded text-slate-300 hover:text-white transition"><i class="fa-solid fa-rotate-left"></i></button>
             <button onclick="app.redo()" title="重做 (Redo)" class="p-2 hover:bg-slate-700 rounded text-slate-300 hover:text-white transition"><i class="fa-solid fa-rotate-right"></i></button>
             <div class="w-px h-5 bg-slate-700 mx-1"></div>
+            <button onclick="app.copySelected()" title="複製所選物件 (Copy)" class="p-2 bg-emerald-600/20 hover:bg-emerald-600/40 rounded text-emerald-400 transition font-medium flex items-center gap-1 px-2.5 text-xs"><i class="fa-solid fa-clone"></i> 複製</button>
             <button onclick="app.toggleSelectedDashed()" title="切換選取物件為虛線/實線" class="p-2 bg-indigo-600/20 hover:bg-indigo-600/40 rounded text-indigo-300 transition font-medium flex items-center gap-1 px-2.5 text-xs"><i class="fa-solid fa-ellipsis"></i> 實/虛線</button>
+            <div class="w-px h-5 bg-slate-700 mx-1"></div>
             <button onclick="app.promptClearCanvas()" title="清除畫布" class="p-2 hover:bg-red-900/40 rounded text-slate-300 hover:text-red-400 transition"><i class="fa-solid fa-trash-can"></i></button>
             <button onclick="app.deleteSelected()" title="刪除選取物件 (Del)" class="p-2 bg-red-600/20 hover:bg-red-600/40 rounded text-red-400 hover:text-red-300 transition font-medium flex items-center gap-1 px-2.5 text-xs"><i class="fa-solid fa-eraser"></i> 刪除</button>
         </div>
@@ -120,6 +122,10 @@
                 <i class="fa-solid fa-arrows-up-down-left-right text-xs"></i>
                 <span class="text-[8px] mt-0.5">移動</span>
             </button>
+            <button onclick="app.setTool('copy_tool')" id="tool-copy_tool" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-400 transition" title="複製物件 (點選物件基準點複製)">
+                <i class="fa-solid fa-clone text-xs"></i>
+                <span class="text-[8px] mt-0.5">複製</span>
+            </button>
             <button onclick="app.setTool('rotate')" id="tool-rotate" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="旋轉物件 (Rotate)">
                 <i class="fa-solid fa-rotate text-xs"></i>
                 <span class="text-[8px] mt-0.5">旋轉</span>
@@ -128,7 +134,7 @@
                 <i class="fa-solid fa-arrows-split-up-and-left text-xs"></i>
                 <span class="text-[8px] mt-0.5">鏡射</span>
             </button>
-            <button onclick="app.setTool('trim')" id="tool-trim" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="修剪 (Trim)">
+            <button onclick="app.setTool('trim')" id="tool-trim" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-rose-400 transition" title="修剪 (點擊交點間線段進行剪除)">
                 <i class="fa-solid fa-scissors text-xs"></i>
                 <span class="text-[8px] mt-0.5">修剪</span>
             </button>
@@ -172,7 +178,7 @@
                 <i class="fa-solid fa-pen-nib text-xs"></i>
                 <span class="text-[8px] mt-0.5">手繪</span>
             </button>
-            <button onclick="app.setTool('dimension')" id="tool-dimension" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="尺寸標註">
+            <button onclick="app.setTool('dimension')" id="tool-dimension" class="tool-btn w-12 h-10 flex flex-col items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 transition" title="尺寸標註">
                 <i class="fa-solid fa-ruler-combined text-xs"></i>
                 <span class="text-[8px] mt-0.5">尺寸</span>
             </button>
@@ -265,7 +271,6 @@
                 <div class="space-y-3">
                     <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">繪圖屬性</h3>
                     
-                    <!-- Line Style Selector (Solid vs Dashed) -->
                     <div>
                         <label class="text-xs text-slate-400 block mb-1.5">線條型態 (實線 / 虛線)</label>
                         <div class="grid grid-cols-2 gap-2">
@@ -278,7 +283,6 @@
                         </div>
                     </div>
 
-                    <!-- MLine Spacing Setting -->
                     <div>
                         <div class="flex justify-between text-xs text-slate-400 mb-1">
                             <span>複線間距 (MLine Offset)</span>
@@ -596,6 +600,9 @@
                 this.mirrorStep = 0;
                 this.mirrorLine = { p1: null, p2: null };
 
+                this.copyStep = 0;
+                this.copyBasePt = null;
+
                 this.isDraggingStairText = false;
                 this.draggingStairTarget = null;
 
@@ -608,8 +615,8 @@
                     gridSpacing: 40,
                     strokeColor: '#3b82f6',
                     strokeWidth: 2,
-                    lineStyle: 'solid', // 'solid' | 'dashed'
-                    mlineSpacing: 12     // MLine double line gap
+                    lineStyle: 'solid',
+                    mlineSpacing: 12
                 };
 
                 this.osnapModes = {
@@ -668,6 +675,10 @@
                             this.deleteSelected();
                         }
                     }
+                    if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C')) {
+                        if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+                        this.copySelected();
+                    }
                 });
             }
 
@@ -679,10 +690,12 @@
                 this.markerTemp = { x: 0, y: 0 };
                 this.mirrorStep = 0;
                 this.mirrorLine = { p1: null, p2: null };
+                this.copyStep = 0;
+                this.copyBasePt = null;
                 this.isBoxSelecting = false;
 
                 document.querySelectorAll('.tool-btn').forEach(btn => {
-                    btn.classList.remove('bg-blue-600', 'bg-emerald-600', 'bg-teal-600', 'bg-amber-600', 'bg-cyan-600', 'bg-orange-600', 'bg-purple-600', 'bg-indigo-600', 'text-white');
+                    btn.classList.remove('bg-blue-600', 'bg-emerald-600', 'bg-teal-600', 'bg-amber-600', 'bg-cyan-600', 'bg-orange-600', 'bg-purple-600', 'bg-indigo-600', 'bg-rose-600', 'text-white');
                     btn.classList.add('bg-slate-800', 'text-slate-300');
                 });
 
@@ -692,7 +705,10 @@
                     if (tool === 'marker') activeBtn.classList.add('bg-emerald-600', 'text-white');
                     else if (tool === 'marker_simple') activeBtn.classList.add('bg-teal-600', 'text-white');
                     else if (tool === 'mirror') activeBtn.classList.add('bg-purple-600', 'text-white');
+                    else if (tool === 'trim') activeBtn.classList.add('bg-rose-600', 'text-white');
+                    else if (tool === 'copy_tool') activeBtn.classList.add('bg-emerald-600', 'text-white');
                     else if (tool === 'mline') activeBtn.classList.add('bg-indigo-600', 'text-white');
+                    else if (tool === 'dimension') activeBtn.classList.add('bg-amber-600', 'text-white');
                     else if (tool.includes('door') || tool.includes('stair')) activeBtn.classList.add('bg-amber-600', 'text-white');
                     else if (tool === 'window') activeBtn.classList.add('bg-cyan-600', 'text-white');
                     else if (tool === 'shutter') activeBtn.classList.add('bg-orange-600', 'text-white');
@@ -700,17 +716,151 @@
                 }
 
                 document.getElementById('status-tool').innerText = {
-                    'select': '選取', 'pan': '平移', 'move': '移動', 'rotate': '旋轉', 'mirror': '鏡射', 'trim': '修剪',
+                    'select': '選取', 'pan': '平移', 'move': '移動', 'copy_tool': '複製', 'rotate': '旋轉', 'mirror': '鏡射', 'trim': '修剪',
                     'marker': '帶箭頭點位', 'marker_simple': '純數字點位', 'line': '直線', 'mline': '複線 (雙線)', 'arc': '三點定弧', 'rect': '矩形',
                     'circle': '圓形', 'freehand': '手繪', 'dimension': '尺寸標註', 'text': '文字',
                     'door_single': '單開門', 'door_double': '雙開門', 'window': '窗戶', 'shutter': '鐵捲門',
                     'stair_single': '單向樓梯', 'stair_double': '雙向樓梯', 'stair_standard': '標準梯'
                 }[tool] || tool;
 
-                if (tool !== 'select' && tool !== 'move' && tool !== 'rotate' && tool !== 'mirror') {
+                if (tool !== 'select' && tool !== 'move' && tool !== 'rotate' && tool !== 'mirror' && tool !== 'copy_tool') {
                     this.selectedIds.clear();
                     this.render();
                 }
+            }
+
+            copySelected() {
+                if (this.selectedIds.size === 0) {
+                    alert('請先選取欲複製的物件！');
+                    return;
+                }
+                this.pushHistory();
+                const newIds = new Set();
+                const offset = 30;
+
+                this.selectedIds.forEach(id => {
+                    const s = this.shapes.find(item => item.id === id);
+                    if (!s) return;
+                    const copy = JSON.parse(JSON.stringify(s));
+                    copy.id = Date.now() + Math.floor(Math.random() * 100000);
+                    this.translateShape(copy, offset, offset);
+                    if (copy.type === 'marker' || copy.type === 'marker_simple') {
+                        copy.label = `${this.markerPrefix}${this.nextMarkerCounter++}`;
+                    }
+                    this.shapes.push(copy);
+                    newIds.add(copy.id);
+                });
+
+                this.selectedIds = newIds;
+                this.updateInspector();
+                this.render();
+            }
+
+            executeTrim(x, y) {
+                let hitSegments = [];
+                const clickTol = 14 / this.view.scale;
+
+                this.shapes.forEach((s, idx) => {
+                    if (s.type === 'line' || s.type === 'dimension') {
+                        const dist = this.distToSegment({ x, y }, { x: s.x1, y: s.y1 }, { x: s.x2, y: s.y2 });
+                        if (dist <= clickTol) {
+                            hitSegments.push({ shapeIdx: idx, shape: s, dist });
+                        }
+                    }
+                });
+
+                if (hitSegments.length === 0) return;
+                hitSegments.sort((a, b) => a.dist - b.dist);
+                const targetObj = hitSegments[0];
+                const targetLine = targetObj.shape;
+                const targetIdx = targetObj.shapeIdx;
+
+                const lineLen = Math.hypot(targetLine.x2 - targetLine.x1, targetLine.y2 - targetLine.y1);
+                if (lineLen === 0) return;
+
+                const cutters = [];
+                this.shapes.forEach((other, oIdx) => {
+                    if (oIdx === targetIdx) return;
+                    if (other.type === 'line' || other.type === 'dimension') {
+                        cutters.push({ p1: { x: other.x1, y: other.y1 }, p2: { x: other.x2, y: other.y2 } });
+                    } else if (other.type === 'mline') {
+                        const offset = (other.spacing || 12) / 2;
+                        const len = Math.hypot(other.x2 - other.x1, other.y2 - other.y1);
+                        if (len > 0) {
+                            const nx = -(other.y2 - other.y1) / len * offset;
+                            const ny = (other.x2 - other.x1) / len * offset;
+                            cutters.push({ p1: { x: other.x1 + nx, y: other.y1 + ny }, p2: { x: other.x2 + nx, y: other.y2 + ny } });
+                            cutters.push({ p1: { x: other.x1 - nx, y: other.y1 - ny }, p2: { x: other.x2 - nx, y: other.y2 - ny } });
+                        }
+                    } else if (other.type === 'rect') {
+                        cutters.push({ p1: { x: other.x, y: other.y }, p2: { x: other.x + other.w, y: other.y } });
+                        cutters.push({ p1: { x: other.x + other.w, y: other.y }, p2: { x: other.x + other.w, y: other.y + other.h } });
+                        cutters.push({ p1: { x: other.x + other.w, y: other.y + other.h }, p2: { x: other.x, y: other.y + other.h } });
+                        cutters.push({ p1: { x: other.x, y: other.y + other.h }, p2: { x: other.x, y: other.y } });
+                    }
+                });
+
+                const tList = [0, 1];
+                cutters.forEach(c => {
+                    const inter = this.getLineIntersection(
+                        { x: targetLine.x1, y: targetLine.y1 },
+                        { x: targetLine.x2, y: targetLine.y2 },
+                        c.p1, c.p2
+                    );
+                    if (inter) {
+                        const t = ((inter.x - targetLine.x1) * (targetLine.x2 - targetLine.x1) + (inter.y - targetLine.y1) * (targetLine.y2 - targetLine.y1)) / (lineLen * lineLen);
+                        if (t > 0.005 && t < 0.995) {
+                            tList.push(t);
+                        }
+                    }
+                });
+
+                tList.sort((a, b) => a - b);
+                const uniqueT = [tList[0]];
+                for (let i = 1; i < tList.length; i++) {
+                    if (tList[i] - uniqueT[uniqueT.length - 1] > 0.005) {
+                        uniqueT.push(tList[i]);
+                    }
+                }
+
+                if (uniqueT.length <= 2) {
+                    this.pushHistory();
+                    this.shapes.splice(targetIdx, 1);
+                    this.selectedIds.delete(targetLine.id);
+                    this.render();
+                    return;
+                }
+
+                const clickT = ((x - targetLine.x1) * (targetLine.x2 - targetLine.x1) + (y - targetLine.y1) * (targetLine.y2 - targetLine.y1)) / (lineLen * lineLen);
+                let hitInterval = -1;
+                for (let i = 0; i < uniqueT.length - 1; i++) {
+                    if (clickT >= uniqueT[i] && clickT <= uniqueT[i+1]) {
+                        hitInterval = i;
+                        break;
+                    }
+                }
+
+                if (hitInterval === -1) return;
+
+                this.pushHistory();
+                const newSegments = [];
+                for (let i = 0; i < uniqueT.length - 1; i++) {
+                    if (i === hitInterval) continue;
+                    const tStart = uniqueT[i];
+                    const tEnd = uniqueT[i+1];
+                    const seg = JSON.parse(JSON.stringify(targetLine));
+                    seg.id = Date.now() + Math.floor(Math.random() * 100000) + i;
+                    seg.x1 = targetLine.x1 + tStart * (targetLine.x2 - targetLine.x1);
+                    seg.y1 = targetLine.y1 + tStart * (targetLine.y2 - targetLine.y1);
+                    seg.x2 = targetLine.x1 + tEnd * (targetLine.x2 - targetLine.x1);
+                    seg.y2 = targetLine.y1 + tEnd * (targetLine.y2 - targetLine.y1);
+                    newSegments.push(seg);
+                }
+
+                this.shapes.splice(targetIdx, 1);
+                this.shapes.push(...newSegments);
+                this.selectedIds.clear();
+                this.render();
             }
 
             setLineStyle(style) {
@@ -785,7 +935,7 @@
                 if (this.selectedIds.size > 0) {
                     this.pushHistory();
                     this.shapes.forEach(s => {
-                        if (this.selectedIds.has(s.id) && !['marker', 'marker_simple'].includes(s.type)) {
+                        if (this.selectedIds.has(s.id) && !['marker', 'marker_simple', 'text'].includes(s.type)) {
                             s.width = this.settings.strokeWidth;
                         }
                     });
@@ -896,7 +1046,7 @@
                     if (s.type === 'marker') {
                         checkPoint({ x: s.x, y: s.y }, 'endpoint');
                         checkPoint({ x: s.bx, y: s.by }, 'center');
-                    } else if (s.type === 'marker_simple') {
+                    } else if (s.type === 'marker_simple' || s.type === 'text') {
                         checkPoint({ x: s.x, y: s.y }, 'center');
                     } else if (['door_single', 'door_double', 'window', 'shutter', 'stair_single', 'stair_double', 'stair_standard'].includes(s.type)) {
                         checkPoint({ x: s.x, y: s.y }, 'center');
@@ -1006,6 +1156,44 @@
                             }
                         }
                         this.updateInspector();
+                    } else if (this.activeTool === 'trim') {
+                        this.executeTrim(pt.x, pt.y);
+                        this.isPointerDown = false;
+                    } else if (this.activeTool === 'copy_tool') {
+                        if (this.selectedIds.size === 0) {
+                            const hitId = this.hitTest(pt.x, pt.y);
+                            if (hitId) this.selectedIds.add(hitId);
+                        }
+                        if (this.selectedIds.size > 0) {
+                            if (this.copyStep === 0) {
+                                this.copyBasePt = { x: pt.x, y: pt.y };
+                                this.copyStep = 1;
+                                this.isPointerDown = false;
+                            } else if (this.copyStep === 1) {
+                                const dx = pt.x - this.copyBasePt.x;
+                                const dy = pt.y - this.copyBasePt.y;
+                                this.pushHistory();
+                                const newIds = new Set();
+                                this.selectedIds.forEach(id => {
+                                    const s = this.shapes.find(item => item.id === id);
+                                    if (!s) return;
+                                    const copy = JSON.parse(JSON.stringify(s));
+                                    copy.id = Date.now() + Math.floor(Math.random() * 100000);
+                                    this.translateShape(copy, dx, dy);
+                                    if (copy.type === 'marker' || copy.type === 'marker_simple') {
+                                        copy.label = `${this.markerPrefix}${this.nextMarkerCounter++}`;
+                                    }
+                                    this.shapes.push(copy);
+                                    newIds.add(copy.id);
+                                });
+                                this.selectedIds = newIds;
+                                this.copyStep = 0;
+                                this.copyBasePt = null;
+                                this.updateInspector();
+                                this.isPointerDown = false;
+                                this.render();
+                            }
+                        }
                     } else if (this.activeTool === 'arc') {
                         if (this.arcStep === 0) {
                             this.arcTemp.p1 = pt;
@@ -1117,7 +1305,6 @@
                             width: this.settings.strokeWidth
                         };
                     } else if (this.activeTool === 'mline') {
-                        // 建立複線圖元
                         this.currentDrawingShape = {
                             id: Date.now(),
                             type: 'mline',
@@ -1161,6 +1348,8 @@
                             type: 'dimension',
                             x1: pt.x, y1: pt.y,
                             x2: pt.x, y2: pt.y,
+                            customText: '',
+                            unit: 'mm',
                             color: this.settings.strokeColor,
                             width: this.settings.strokeWidth
                         };
@@ -1219,7 +1408,7 @@
                     }
                 }
 
-                if (!this.isPointerDown && this.markerStep === 0 && this.mirrorStep === 0 && this.activeTool !== 'arc') {
+                if (!this.isPointerDown && this.markerStep === 0 && this.mirrorStep === 0 && this.copyStep === 0 && this.activeTool !== 'arc') {
                     this.render();
                     return;
                 }
@@ -1263,7 +1452,7 @@
                         this.currentDrawingShape.points.push({ x: targetPt.x, y: targetPt.y });
                     }
                     this.render();
-                } else if (this.activeTool === 'arc') {
+                } else if (this.activeTool === 'arc' || this.activeTool === 'copy_tool') {
                     this.render();
                 }
             }
@@ -1361,7 +1550,19 @@
                             if (Math.hypot(x - pt.x, y - pt.y) < 10 / this.view.scale) return s.id;
                         }
                     } else if (s.type === 'text') {
-                        if (Math.abs(x - s.x) < 50 && Math.abs(y - s.y) < 20) return s.id;
+                        const sc = s.scale || 1.0;
+                        const approxW = Math.max(40, (s.text ? s.text.length * 10 : 40)) * sc;
+                        const approxH = 24 * sc;
+                        const rot = ((s.rotation || 0) * Math.PI) / 180;
+                        const cos = Math.cos(-rot);
+                        const sin = Math.sin(-rot);
+                        const dx = x - s.x;
+                        const dy = y - s.y;
+                        const localX = dx * cos - dy * sin;
+                        const localY = dx * sin + dy * cos;
+                        if (localX >= -10 && localX <= approxW && localY >= -approxH && localY <= 10) {
+                            return s.id;
+                        }
                     }
                 }
                 return null;
@@ -1377,7 +1578,7 @@
 
             isShapeInBox(s, minX, maxX, minY, maxY) {
                 if (s.type === 'marker') return (s.x >= minX && s.x <= maxX && s.y >= minY && s.y <= maxY) || (s.bx >= minX && s.bx <= maxX && s.by >= minY && s.by <= maxY);
-                if (s.type === 'marker_simple') return s.x >= minX && s.x <= maxX && s.y >= minY && s.y <= maxY;
+                if (s.type === 'marker_simple' || s.type === 'text') return s.x >= minX && s.x <= maxX && s.y >= minY && s.y <= maxY;
                 if (['door_single', 'door_double', 'window', 'shutter', 'stair_single', 'stair_double', 'stair_standard'].includes(s.type)) {
                     return s.x >= minX && s.x <= maxX && s.y >= minY && s.y <= maxY;
                 }
@@ -1400,7 +1601,7 @@
                 if (s.type === 'marker') {
                     s.x += dx; s.y += dy;
                     s.bx += dx; s.by += dy;
-                } else if (s.type === 'marker_simple') {
+                } else if (s.type === 'marker_simple' || s.type === 'text') {
                     s.x += dx; s.y += dy;
                 } else if (['door_single', 'door_double', 'window', 'shutter', 'stair_single', 'stair_double', 'stair_standard'].includes(s.type)) {
                     s.x += dx; s.y += dy;
@@ -1417,8 +1618,6 @@
                     s.cx += dx; s.cy += dy;
                 } else if (s.type === 'freehand' && s.points) {
                     s.points.forEach(p => { p.x += dx; p.y += dy; });
-                } else if (s.type === 'text') {
-                    s.x += dx; s.y += dy;
                 }
             }
 
@@ -1459,7 +1658,7 @@
                         const rBubble = reflectPt({x: copy.bx, y: copy.by});
                         copy.x = rTarget.x; copy.y = rTarget.y;
                         copy.bx = rBubble.x; copy.by = rBubble.y;
-                    } else if (['door_single', 'door_double', 'window', 'shutter', 'stair_single', 'stair_double', 'stair_standard', 'marker_simple'].includes(copy.type)) {
+                    } else if (['door_single', 'door_double', 'window', 'shutter', 'stair_single', 'stair_double', 'stair_standard', 'marker_simple', 'text'].includes(copy.type)) {
                         const rCenter = reflectPt({x: copy.x, y: copy.y});
                         copy.x = rCenter.x; copy.y = rCenter.y;
                         if (copy.type === 'door_single') {
@@ -1488,7 +1687,7 @@
                 this.selectedIds.forEach(id => {
                     const s = this.shapes.find(item => item.id === id);
                     if (!s) return;
-                    if (['door_single', 'door_double', 'window', 'shutter', 'stair_single', 'stair_double', 'stair_standard'].includes(s.type)) {
+                    if (['door_single', 'door_double', 'window', 'shutter', 'stair_single', 'stair_double', 'stair_standard', 'text'].includes(s.type)) {
                         s.rotation = ((s.rotation || 0) + deg) % 360;
                     }
                 });
@@ -1502,7 +1701,7 @@
                 this.selectedIds.forEach(id => {
                     const s = this.shapes.find(item => item.id === id);
                     if (!s) return;
-                    if (['marker', 'marker_simple', 'door_single', 'door_double', 'window', 'shutter', 'stair_single', 'stair_double', 'stair_standard'].includes(s.type)) {
+                    if (['marker', 'marker_simple', 'door_single', 'door_double', 'window', 'shutter', 'stair_single', 'stair_double', 'stair_standard', 'text'].includes(s.type)) {
                         s.scale = Math.max(0.2, Math.min(5.0, (s.scale || 1.0) * factor));
                     } else if (s.type === 'circle') {
                         s.r = Math.max(2, s.r * factor);
@@ -1522,7 +1721,7 @@
                 this.selectedIds.forEach(id => {
                     const s = this.shapes.find(item => item.id === id);
                     if (!s) return;
-                    if (['marker', 'marker_simple', 'door_single', 'door_double', 'window', 'shutter', 'stair_single', 'stair_double', 'stair_standard'].includes(s.type)) {
+                    if (['marker', 'marker_simple', 'door_single', 'door_double', 'window', 'shutter', 'stair_single', 'stair_double', 'stair_standard', 'text'].includes(s.type)) {
                         s.scale = factor;
                     }
                 });
@@ -1537,6 +1736,52 @@
                 if (shape && ['marker', 'marker_simple'].includes(shape.type)) {
                     shape.label = newLabel.trim();
                     this.pushHistory();
+                    this.render();
+                }
+            }
+
+            updateSelectedTextContent(newText) {
+                if (this.selectedIds.size === 0) return;
+                const singleId = Array.from(this.selectedIds)[0];
+                const shape = this.shapes.find(s => s.id === singleId);
+                if (shape && shape.type === 'text') {
+                    shape.text = newText.trim();
+                    this.pushHistory();
+                    this.render();
+                }
+            }
+
+            updateSelectedDimensionText(val) {
+                if (this.selectedIds.size === 0) return;
+                const singleId = Array.from(this.selectedIds)[0];
+                const s = this.shapes.find(item => item.id === singleId);
+                if (s && s.type === 'dimension') {
+                    s.customText = val.trim();
+                    this.pushHistory();
+                    this.render();
+                }
+            }
+
+            updateSelectedDimensionUnit(unit) {
+                if (this.selectedIds.size === 0) return;
+                const singleId = Array.from(this.selectedIds)[0];
+                const s = this.shapes.find(item => item.id === singleId);
+                if (s && s.type === 'dimension') {
+                    s.unit = unit.trim();
+                    this.pushHistory();
+                    this.render();
+                }
+            }
+
+            resetDimensionToAuto() {
+                if (this.selectedIds.size === 0) return;
+                const singleId = Array.from(this.selectedIds)[0];
+                const s = this.shapes.find(item => item.id === singleId);
+                if (s && s.type === 'dimension') {
+                    s.customText = '';
+                    s.unit = 'mm';
+                    this.pushHistory();
+                    this.updateInspector();
                     this.render();
                 }
             }
@@ -1592,11 +1837,15 @@
                     container.innerHTML = `
                         <div class="font-semibold text-blue-400 mb-1">已選取 ${this.selectedIds.size} 個物件</div>
                         <div class="grid grid-cols-2 gap-2 mt-2">
+                            <button onclick="app.copySelected()" class="bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 border border-emerald-600/50 py-1.5 rounded text-xs transition"><i class="fa-solid fa-clone"></i> 複製選取</button>
                             <button onclick="app.toggleSelectedDashed()" class="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-600/50 py-1.5 rounded text-xs transition"><i class="fa-solid fa-ellipsis"></i> 切換實/虛線</button>
-                            <button onclick="app.rotateSelectedBy(90)" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 py-1.5 rounded-lg text-xs transition"><i class="fa-solid fa-rotate"></i> 旋轉 90°</button>
                         </div>
                         <div class="grid grid-cols-2 gap-2 mt-2">
                             <button onclick="app.scaleSelected(1.2)" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 py-1.5 rounded text-xs transition"><i class="fa-solid fa-magnifying-glass-plus text-blue-400"></i> 等比放大</button>
+                            <button onclick="app.scaleSelected(0.833)" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 py-1.5 rounded text-xs transition"><i class="fa-solid fa-magnifying-glass-minus text-blue-400"></i> 等比縮小</button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 mt-2">
+                            <button onclick="app.rotateSelectedBy(90)" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 py-1.5 rounded-lg text-xs transition"><i class="fa-solid fa-rotate"></i> 旋轉 90°</button>
                             <button onclick="app.deleteSelected()" class="bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-700/50 py-1.5 rounded-lg text-xs transition font-semibold"><i class="fa-solid fa-eraser"></i> 刪除</button>
                         </div>
                     `;
@@ -1636,7 +1885,74 @@
                             </div>
                         </div>
                         <div class="grid grid-cols-2 gap-2 mt-4">
+                            <button onclick="app.copySelected()" class="bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 border border-emerald-600/50 py-1.5 rounded text-xs transition"><i class="fa-solid fa-clone"></i> 複製此點位</button>
                             <button onclick="app.rotateSelectedBy(90)" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 py-1.5 rounded-lg text-xs transition"><i class="fa-solid fa-rotate"></i> 旋轉 90°</button>
+                        </div>
+                        <button onclick="app.deleteSelected()" class="w-full mt-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-700/50 py-1.5 rounded-lg text-xs transition font-semibold"><i class="fa-solid fa-eraser"></i> 刪除</button>
+                    `;
+                } else if (s.type === 'text') {
+                    const currentScale = s.scale || 1.0;
+                    container.innerHTML = `
+                        <div class="flex items-center justify-between font-semibold text-blue-400 mb-2">
+                            <span><i class="fa-solid fa-font"></i> 文字註解 (Text Annotation)</span>
+                        </div>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="text-[11px] text-slate-400 block mb-1">文字內容</label>
+                                <input type="text" value="${s.text || ''}" onchange="app.updateSelectedTextContent(this.value)" class="w-full bg-slate-800 border border-slate-700 rounded px-2.5 py-1 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500">
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-[11px] text-slate-400 mb-1">
+                                    <span>字體縮放大小 (Scale)</span>
+                                    <span class="font-mono text-slate-200">${currentScale.toFixed(2)}x</span>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2 mb-2">
+                                    <button onclick="app.scaleSelected(1.2)" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 py-1.5 rounded text-xs transition"><i class="fa-solid fa-magnifying-glass-plus text-blue-400"></i> 放大 (+)</button>
+                                    <button onclick="app.scaleSelected(0.833)" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 py-1.5 rounded text-xs transition"><i class="fa-solid fa-magnifying-glass-minus text-blue-400"></i> 縮小 (-)</button>
+                                </div>
+                                <input type="range" min="0.4" max="5.0" step="0.05" value="${currentScale}" oninput="app.updateSelectedScale(this.value)" class="w-full accent-blue-600 bg-slate-800 rounded-lg appearance-none h-2 cursor-pointer">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 mt-4">
+                            <button onclick="app.copySelected()" class="bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 border border-emerald-600/50 py-1.5 rounded text-xs transition"><i class="fa-solid fa-clone"></i> 複製文字</button>
+                            <button onclick="app.rotateSelectedBy(90)" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 py-1.5 rounded-lg text-xs transition"><i class="fa-solid fa-rotate"></i> 旋轉 90°</button>
+                        </div>
+                        <button onclick="app.deleteSelected()" class="w-full mt-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-700/50 py-1.5 rounded-lg text-xs transition font-semibold"><i class="fa-solid fa-eraser"></i> 刪除</button>
+                    `;
+                } else if (s.type === 'dimension') {
+                    const autoDist = Math.hypot(s.x2 - s.x1, s.y2 - s.y1).toFixed(1);
+                    const customText = s.customText || '';
+                    const unit = s.unit !== undefined ? s.unit : 'mm';
+                    container.innerHTML = `
+                        <div class="flex items-center justify-between font-semibold text-amber-400 mb-2">
+                            <span><i class="fa-solid fa-ruler-combined"></i> 尺寸標註 (Dimension)</span>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="flex justify-between bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/60 text-xs">
+                                <span>自動計算長度:</span>
+                                <span class="font-mono text-cyan-400 font-semibold">${autoDist} mm</span>
+                            </div>
+                            <div>
+                                <label class="text-[11px] text-slate-400 block mb-1">自訂標註文字/數值 (留空則用自動計算)</label>
+                                <input type="text" value="${customText}" onchange="app.updateSelectedDimensionText(this.value)" placeholder="例如: 3600 或 牆厚 200" class="w-full bg-slate-800 border border-slate-700 rounded px-2.5 py-1 text-xs text-slate-100 font-mono focus:outline-none focus:border-amber-500">
+                            </div>
+                            <div>
+                                <label class="text-[11px] text-slate-400 block mb-1">單位 (Unit)</label>
+                                <div class="flex items-center space-x-2">
+                                    <input type="text" value="${unit}" onchange="app.updateSelectedDimensionUnit(this.value)" class="w-24 bg-slate-800 border border-slate-700 rounded px-2.5 py-1 text-xs text-slate-100 font-mono focus:outline-none focus:border-amber-500">
+                                    <select onchange="app.updateSelectedDimensionUnit(this.value); app.updateInspector();" class="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
+                                        <option value="mm" ${unit==='mm'?'selected':''}>mm (毫米)</option>
+                                        <option value="cm" ${unit==='cm'?'selected':''}>cm (公分)</option>
+                                        <option value="m" ${unit==='m'?'selected':''}>m (公尺)</option>
+                                        <option value="in" ${unit==='in'?'selected':''}>in (英寸)</option>
+                                        <option value="ft" ${unit==='ft'?'selected':''}>ft (英尺)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button onclick="app.resetDimensionToAuto()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 py-1.5 rounded text-xs transition"><i class="fa-solid fa-rotate-left"></i> 重設為自動計算</button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 mt-4">
+                            <button onclick="app.copySelected()" class="bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 border border-emerald-600/50 py-1.5 rounded text-xs transition"><i class="fa-solid fa-clone"></i> 複製尺寸</button>
                             <button onclick="app.deleteSelected()" class="bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-700/50 py-1.5 rounded-lg text-xs transition font-semibold"><i class="fa-solid fa-eraser"></i> 刪除</button>
                         </div>
                     `;
@@ -1661,9 +1977,10 @@
                             </div>
                         </div>
                         <div class="grid grid-cols-2 gap-2 mt-3">
+                            <button onclick="app.copySelected()" class="bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 border border-emerald-600/50 py-1.5 rounded text-xs transition"><i class="fa-solid fa-clone"></i> 複製複線</button>
                             <button onclick="app.rotateSelectedBy(90)" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 py-1.5 rounded-lg text-xs transition"><i class="fa-solid fa-rotate"></i> 旋轉 90°</button>
-                            <button onclick="app.deleteSelected()" class="bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-700/50 py-1.5 rounded-lg text-xs transition font-semibold"><i class="fa-solid fa-eraser"></i> 刪除</button>
                         </div>
+                        <button onclick="app.deleteSelected()" class="w-full mt-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-700/50 py-1.5 rounded-lg text-xs transition font-semibold"><i class="fa-solid fa-eraser"></i> 刪除</button>
                     `;
                 } else {
                     const labelNames = {
@@ -1682,13 +1999,14 @@
                         </div>
                         ` : ''}
                         <div class="grid grid-cols-2 gap-2 mt-2">
+                            <button onclick="app.copySelected()" class="bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 border border-emerald-600/50 py-1.5 rounded text-xs transition"><i class="fa-solid fa-clone"></i> 複製物件</button>
+                            <button onclick="app.rotateSelectedBy(90)" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 py-1.5 rounded-lg text-xs transition"><i class="fa-solid fa-rotate"></i> 旋轉 90°</button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 mt-2">
                             <button onclick="app.scaleSelected(1.2)" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 py-1.5 rounded text-xs transition"><i class="fa-solid fa-magnifying-glass-plus text-blue-400"></i> 放大</button>
                             <button onclick="app.scaleSelected(0.833)" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 py-1.5 rounded text-xs transition"><i class="fa-solid fa-magnifying-glass-minus text-blue-400"></i> 縮小</button>
                         </div>
-                        <div class="grid grid-cols-2 gap-2 mt-2">
-                            <button onclick="app.rotateSelectedBy(90)" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 py-1.5 rounded-lg text-xs transition"><i class="fa-solid fa-rotate"></i> 旋轉 90°</button>
-                            <button onclick="app.deleteSelected()" class="bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-700/50 py-1.5 rounded-lg text-xs transition font-semibold"><i class="fa-solid fa-eraser"></i> 刪除</button>
-                        </div>
+                        <button onclick="app.deleteSelected()" class="w-full mt-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-700/50 py-1.5 rounded-lg text-xs transition font-semibold"><i class="fa-solid fa-eraser"></i> 刪除</button>
                     `;
                 }
             }
@@ -1771,14 +2089,14 @@
                     if (filter === 'door' && !s.type.includes('door')) return false;
                     if (filter === 'window' && !['window', 'shutter'].includes(s.type)) return false;
                     if (filter === 'stair' && !s.type.includes('stair')) return false;
-                    if (filter === 'geometry' && !['line', 'mline', 'rect', 'circle', 'arc', 'freehand'].includes(s.type)) return false;
+                    if (filter === 'geometry' && !['line', 'mline', 'rect', 'circle', 'arc', 'freehand', 'dimension', 'text'].includes(s.type)) return false;
                     return true;
                 });
 
                 document.getElementById('tracker-stat-total').innerText = this.shapes.length;
                 document.getElementById('tracker-stat-markers').innerText = this.shapes.filter(s => ['marker', 'marker_simple'].includes(s.type)).length;
                 document.getElementById('tracker-stat-openings').innerText = this.shapes.filter(s => s.type.includes('door') || ['window', 'shutter'].includes(s.type)).length;
-                document.getElementById('tracker-stat-others').innerText = this.shapes.filter(s => s.type.includes('stair') || ['line', 'mline', 'rect', 'circle', 'arc', 'freehand'].includes(s.type)).length;
+                document.getElementById('tracker-stat-others').innerText = this.shapes.filter(s => s.type.includes('stair') || ['line', 'mline', 'rect', 'circle', 'arc', 'freehand', 'dimension', 'text'].includes(s.type)).length;
 
                 const tbody = document.getElementById('tracker-tbody');
                 tbody.innerHTML = filtered.map(s => {
@@ -1937,10 +2255,13 @@
                             maxY = Math.max(maxY, p.y);
                         });
                     } else if (s.type === 'text') {
-                        minX = Math.min(minX, s.x - 20);
-                        minY = Math.min(minY, s.y - 20);
-                        maxX = Math.max(maxX, s.x + 80);
-                        maxY = Math.max(maxY, s.y + 20);
+                        const sc = s.scale || 1.0;
+                        const approxW = Math.max(40, (s.text ? s.text.length * 10 : 40)) * sc;
+                        const approxH = 24 * sc;
+                        minX = Math.min(minX, s.x - 10);
+                        minY = Math.min(minY, s.y - approxH);
+                        maxX = Math.max(maxX, s.x + approxW);
+                        maxY = Math.max(maxY, s.y + 10);
                     }
                 });
                 return { minX, minY, maxX, maxY };
@@ -1998,8 +2319,10 @@
                     if (s.type === 'line' || s.type === 'dimension') {
                         addLine(s.x1, s.y1, s.x2, s.y2, "GEOMETRY");
                         if (s.type === 'dimension') {
-                            const dist = Math.hypot(s.x2 - s.x1, s.y2 - s.y1).toFixed(1) + ' mm';
-                            addText(dist, (s.x1 + s.x2)/2, (s.y1 + s.y2)/2 - 5, 10, "DIMENSION");
+                            const autoDist = Math.hypot(s.x2 - s.x1, s.y2 - s.y1).toFixed(1);
+                            const unit = s.unit !== undefined ? s.unit : 'mm';
+                            const displayVal = (s.customText && s.customText.trim() !== '') ? s.customText : `${autoDist} ${unit}`;
+                            addText(displayVal, (s.x1 + s.x2)/2, (s.y1 + s.y2)/2 - 5, 10, "DIMENSION");
                         }
                     } else if (s.type === 'mline') {
                         const offset = (s.spacing || 12) / 2;
@@ -2144,7 +2467,9 @@
                         addLine(s.x + midT.x, s.y + midT.y, s.x + midB.x, s.y + midB.y, "STAIR");
 
                     } else if (s.type === 'text') {
-                        addText(s.text || "", s.x, s.y, 14, "TEXT");
+                        const sc = s.scale || 1.0;
+                        const h = 16 * sc;
+                        addText(s.text || "", s.x, s.y, h, "TEXT");
                     }
                 });
 
@@ -2280,6 +2605,19 @@
                             const p1 = this.worldToScreen(s.x1, s.y1);
                             const p2 = this.worldToScreen(s.x2, s.y2);
                             svg += `<line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke="${s.color}" stroke-width="${s.width * this.view.scale}" ${dashAttr}/>`;
+                        } else if (s.type === 'mline') {
+                            const offset = (s.spacing || 12) / 2;
+                            const len = Math.hypot(s.x2 - s.x1, s.y2 - s.y1);
+                            if (len > 0) {
+                                const nx = -(s.y2 - s.y1) / len * offset;
+                                const ny = (s.x2 - s.x1) / len * offset;
+                                const p1a = this.worldToScreen(s.x1 + nx, s.y1 + ny);
+                                const p2a = this.worldToScreen(s.x2 + nx, s.y2 + ny);
+                                const p1b = this.worldToScreen(s.x1 - nx, s.y1 - ny);
+                                const p2b = this.worldToScreen(s.x2 - nx, s.y2 - ny);
+                                svg += `<line x1="${p1a.x}" y1="${p1a.y}" x2="${p2a.x}" y2="${p2a.y}" stroke="${s.color}" stroke-width="${s.width * this.view.scale}" ${dashAttr}/>`;
+                                svg += `<line x1="${p1b.x}" y1="${p1b.y}" x2="${p2b.x}" y2="${p2b.y}" stroke="${s.color}" stroke-width="${s.width * this.view.scale}" ${dashAttr}/>`;
+                            }
                         } else if (s.type === 'rect') {
                             const p = this.worldToScreen(s.x, s.y);
                             svg += `<rect x="${p.x}" y="${p.y}" width="${s.w * this.view.scale}" height="${s.h * this.view.scale}" fill="none" stroke="${s.color}" stroke-width="${s.width * this.view.scale}" ${dashAttr}/>`;
@@ -2300,15 +2638,21 @@
             confirmTextAdd() {
                 const textVal = document.getElementById('text-input-field').value.trim();
                 if (textVal) {
-                    this.shapes.push({
+                    const newTextObj = {
                         id: Date.now(),
                         type: 'text',
                         x: this.pendingTextPos.x,
                         y: this.pendingTextPos.y,
                         text: textVal,
+                        scale: 1.0,
+                        rotation: 0,
                         color: this.settings.strokeColor
-                    });
+                    };
+                    this.shapes.push(newTextObj);
                     this.pushHistory();
+                    this.selectedIds.clear();
+                    this.selectedIds.add(newTextObj.id);
+                    this.updateInspector();
                     this.render();
                 }
                 this.closeModal('text-modal');
@@ -2351,6 +2695,18 @@
                             this.ctx.restore();
                         }
                     }
+                }
+
+                if (this.activeTool === 'copy_tool' && this.copyStep === 1 && this.copyBasePt) {
+                    this.ctx.save();
+                    this.ctx.strokeStyle = '#10b981';
+                    this.ctx.lineWidth = 1.5 / this.view.scale;
+                    this.ctx.setLineDash([5, 5]);
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(this.copyBasePt.x, this.copyBasePt.y);
+                    this.ctx.lineTo(this.currentPointer.x, this.currentPointer.y);
+                    this.ctx.stroke();
+                    this.ctx.restore();
                 }
 
                 if (this.activeTool === 'marker' && this.markerStep === 1) {
@@ -2473,7 +2829,6 @@
                     ctx.shadowBlur = 8;
                 }
 
-                // Apply dashed line styling if configured
                 if (s.lineStyle === 'dashed') {
                     ctx.setLineDash([8, 6]);
                 } else {
@@ -2489,21 +2844,75 @@
                         }
                         ctx.stroke();
                     }
+                } else if (s.type === 'dimension') {
+                    const angle = Math.atan2(s.y2 - s.y1, s.x2 - s.x1);
+                    const autoDist = Math.hypot(s.x2 - s.x1, s.y2 - s.y1).toFixed(1);
+                    const unit = s.unit !== undefined ? s.unit : 'mm';
+                    const displayVal = (s.customText && s.customText.trim() !== '') ? s.customText : `${autoDist} ${unit}`;
+
+                    const midX = (s.x1 + s.x2) / 2;
+                    const midY = (s.y1 + s.y2) / 2;
+                    const arrowLen = 10;
+
+                    ctx.strokeStyle = strokeColor;
+                    ctx.lineWidth = s.width || 2;
+                    ctx.beginPath();
+                    ctx.moveTo(s.x1, s.y1);
+                    ctx.lineTo(s.x2, s.y2);
+                    ctx.stroke();
+
+                    ctx.save();
+                    ctx.translate(s.x1, s.y1);
+                    ctx.rotate(angle);
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(arrowLen, arrowLen * 0.4);
+                    ctx.lineTo(arrowLen, -arrowLen * 0.4);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.restore();
+
+                    ctx.save();
+                    ctx.translate(s.x2, s.y2);
+                    ctx.rotate(angle);
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(-arrowLen, arrowLen * 0.4);
+                    ctx.lineTo(-arrowLen, -arrowLen * 0.4);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.restore();
+
+                    ctx.setLineDash([]);
+                    ctx.font = '11px Fira Code, monospace';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    const textMetrics = ctx.measureText(displayVal);
+                    const pillW = textMetrics.width + 12;
+                    const pillH = 18;
+
+                    ctx.fillStyle = isPrintMode ? '#ffffff' : '#0f172a';
+                    ctx.strokeStyle = strokeColor;
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.roundRect(midX - pillW / 2, midY - pillH / 2, pillW, pillH, 4);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.fillStyle = isPrintMode ? '#000000' : '#38bdf8';
+                    ctx.fillText(displayVal, midX, midY);
+
                 } else if (s.type === 'mline') {
-                    // 繪製複線（雙平行線及端點封口）
                     const offset = (s.spacing || 12) / 2;
                     const len = Math.hypot(s.x2 - s.x1, s.y2 - s.y1);
                     if (len > 0) {
                         const nx = -(s.y2 - s.y1) / len * offset;
                         const ny = (s.x2 - s.x1) / len * offset;
-
-                        // 雙軌線
                         ctx.beginPath();
                         ctx.moveTo(s.x1 + nx, s.y1 + ny);
                         ctx.lineTo(s.x2 + nx, s.y2 + ny);
                         ctx.moveTo(s.x1 - nx, s.y1 - ny);
                         ctx.lineTo(s.x2 - nx, s.y2 - ny);
-                        // 兩端封口線
                         ctx.moveTo(s.x1 + nx, s.y1 + ny);
                         ctx.lineTo(s.x1 - nx, s.y1 - ny);
                         ctx.moveTo(s.x2 + nx, s.y2 + ny);
@@ -2772,7 +3181,15 @@
                 } else if (s.type === 'circle') {
                     ctx.beginPath(); ctx.arc(s.cx, s.cy, s.r, 0, Math.PI * 2); ctx.stroke();
                 } else if (s.type === 'text') {
-                    ctx.font = '16px Inter'; ctx.fillText(s.text, s.x, s.y);
+                    ctx.save();
+                    ctx.translate(s.x, s.y);
+                    ctx.rotate(((s.rotation || 0) * Math.PI) / 180);
+                    const sc = s.scale || 1.0;
+                    const fontSize = Math.round(16 * sc);
+                    ctx.font = `${fontSize}px Inter, sans-serif`;
+                    ctx.fillStyle = strokeColor;
+                    ctx.fillText(s.text || '', 0, 0);
+                    ctx.restore();
                 }
 
                 ctx.restore();
