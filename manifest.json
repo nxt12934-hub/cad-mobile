@@ -6,8 +6,8 @@
   "orientation": "any",
   "scope": "/",
   "short_name": "nxt12934-hub.github",
-  "start_url": "/",
+  "start_url": "./index.html",
   "theme_color": "#ffffff",
-  "id": "sammou -cad mobile",
-  "description": "cad mobile"
+  "id": "CAD Studio Pro",
+  "lang": "zh"
 }
